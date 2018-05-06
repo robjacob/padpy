@@ -1,14 +1,98 @@
 # UI code is separated out here, just for modularity
 
 import tkinter
+import time, datetime, sys, random ###
 
 ### layout: some padding or margin??
 
-# Remove old bookmarks
-def resetBookmarksPanel ():
-	if bookmarksPanel:
-		for c in bookmarksPanel.winfo_children():
-			c.destroy()
+# An initially blank widget that can show data for a bookmark,
+# can be changed subsequently to show a different bookmark.
+# Doing it this way, rather than deleting the widgets and making new ones,
+# seems to avoid flashing in the UI
+class BookmarkW:
+	# Make the blank widget
+	def __init__ (self, bookmarksPanel):
+		self.bookmark = None
+		
+		self.main = tkinter.Frame (bookmarksPanel, borderwidth=1, background="grey")
+		self.main.bind ("<Button-1>", self.callback)
+		self.main.pack (side="top", fill="both", expand=True)
+
+		self.urlw = tkinter.Label (self.main, font=('', '10', ''))
+		self.urlw.bind ("<Button-1>", self.callback)
+		self.urlw.pack (side="top", fill="both", expand=True)
+
+		self.titlew = tkinter.Label (self.main, font=('', '12', 'bold'))
+		self.titlew.bind ("<Button-1>", self.callback)
+		self.titlew.pack (side="top", fill="both", expand=True)
+
+		self.selectionw = tkinter.Label (self.main)
+		self.selectionw.bind ("<Button-1>", self.callback)
+		self.selectionw.pack (side="top", fill="both", expand=True)
+
+		self.thumbw = tkinter.Label (self.main)
+		self.thumbw.bind ("<Button-1>", self.callback)
+		self.thumbw.pack (side="top", fill="both", expand=True)
+
+		self.timew = tkinter.Label (self.main)
+		self.timew.bind ("<Button-1>", self.callback)
+		self.timew.pack (side="top", fill="both", expand=True)
+
+		self.distw = tkinter.Label (self.main)
+		self.distw.bind ("<Button-1>", self.callback)
+		self.distw.pack (side="top", fill="both", expand=True)
+
+		self.main.pack_forget()
+
+	# Populate the widget with given bookmark
+	def showBookmark (self, bookmark, sendBookmark):
+		self.bookmark = bookmark
+		self.sendBookmark = sendBookmark
+
+		self.urlw["text"] = self.bookmark.url
+		self.titlew["text"] = self.bookmark.title
+		self.selectionw["text"] = self.bookmark.selection
+		###	image = tkinter.PhotoImage (file=bookmark.thumb)
+		###	self.thumb["image"] = image
+		self.thumbw["text"] = bookmark.thumb
+		### better way to show time
+		self.timew["text"] = self.bookmark.time
+		### color or other way to display
+		self.distw["text"] = self.bookmark.distCS()
+
+		self.main.pack()
+
+	# Hide the widget, for those we currently don't need
+	def hideBookmark (self):
+		self.main.pack_forget()
+
+	def callback (self, ignoreevent):
+		self.sendBookmark (self.bookmark.url)
+
+# Plug the bookmarks into the bookmark widgets
+def showBookmarks (bookmarks, sendBookmark):
+	ndraw = min (len(bookmarks), len(bookmarkWidgets))
+
+	# Save max distance^2 for graphic display
+	maxDist = bookmarks[-1].distCS()
+# 		// Shading based on distance squared,
+# 		// want "decrement" from pure white when you hit maxDist
+# 		var decrement = 0.2		
+# 		var brightness = Math.floor (255 * (1 - b.distCS() * (decrement / maxDist)))
+# 		bhtml.getElementsByClassName("bookmarkBackground")[0].style.backgroundColor =
+# 			"rgb(" + brightness + "," + brightness + "," + brightness + ")"
+
+# 		// Make the bar graph
+# 		var rect = bhtml.getElementsByClassName("bar")[0]
+# 		rect.y.baseVal.value = 60*(1.-b.interest); // This "60" also appears in front.html
+# 		rect.height.baseVal.value = 60*b.interest;
+
+	for i in range (ndraw):
+		bookmarkWidgets[i].showBookmark(bookmarks[i], sendBookmark)
+
+	# Make the rest of them, if any, invisible
+	for i in range (ndraw, len(bookmarkWidgets)):
+		bookmarkWidgets[i].hideBookmark()
 
 ### ALSO CAN USE
 ### height in lines (else fits to contents)
@@ -19,7 +103,7 @@ def resetBookmarksPanel ():
 # Draw a given bookmark, by creating some widgets for it,
 # and give it arg callback
 # and install it under our bookmarksPanel
-def drawBookmark (bookmark, callback):
+def drawBookmarkNOT (bookmark, callback):
 	main = tkinter.Frame (bookmarksPanel, borderwidth=1, background="grey")
 	# Pass our "bookmark" in to the callback
 	main.bind ("<Button-1>", lambda event, bookmark=bookmark: callback (event, bookmark))
@@ -85,11 +169,18 @@ continuousBox.pack(side="top")
 bookmarksPanel = tkinter.Frame (top)
 bookmarksPanel.pack (side="top")
 
+# Empty widgets, each can show a bookmark, max of 5
+bookmarkWidgets = []
+for i in range (5):
+	bookmarkWidgets.append (BookmarkW (bookmarksPanel))
+
 # Sliders panel area
 slidersPanel = tkinter.Frame (top, borderwidth=2, background="black")
 slidersPanel.pack (side="top")
 
 # Sliders
+### could try again 0..1 slider, problem was parse?
+### maybe use Var()'s for them?
 brainSliders = []
 for i in range (5):
 	s = tkinter.Scale (slidersPanel, from_=100, to_=0)

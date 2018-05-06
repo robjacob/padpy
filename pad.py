@@ -106,6 +106,10 @@ def callShell (script):
 # COMMUNICATE WITH BRAIN DEVICE
 ############################################################
 
+### TRY IT ONCE: could do it wihtout timer, just viewCB() every reading below
+###	expect too jarring
+
+
 # Call from brainclient, arg = line of text from matlab
 # This is coming from a separate thread,
 # both threads access currentBrainState and currentInterest
@@ -121,7 +125,7 @@ def brainCB (line):
 		print ("brainCB: can't parse input line: " + line, file=sys.stderr)
 
 	else:
-		print (tokens) ###
+		print (tokens) ### is this stuff working ok, still need print stmts?
 		currentState = StatePoint (list (map (float, tokens)))
 
 		# Optional: display it back to user via the sliders
@@ -160,48 +164,28 @@ def saveCB ():
 # 			allBookmarks.push (new Bookmark (url, title, tempfilename, selection))
 
 # 			// Optional: Update bookmarks display
-# 			viewAll();
+# 			viewCB();
 # 		})
 # 	})
 
 
 #
-# View button callback: Show bookmarks for user to view
-### MERGE BELOW?
+# View button callback: displays all bookmarks, sorted by distance to current state
+# also used in some other places
 # 
+### improve on this rather awkward passing of sendBookmark
 def viewCB ():
-	viewAll()
-
-# Shared common subroutine
-# Show bookmarks for user to view
-# Displays all bookmarks, sorted by distance to current state
-def viewAll ():
-	# Sort by distance, into new temporary list
-	bookmarks = sorted (allBookmarks, key=lambda b: b.distCS())
-
- 	# Remove old bookmarks, make a new blank panel
-	ui.resetBookmarksPanel()
-
-	# Make a new BookmarkDraw for each bookmark
-	for b in bookmarks: ui.drawBookmark (b, bookmarkCB)
-
-	# Save max distance^2 for graphic display
-	maxDist = bookmarks[-1].distCS()
-# 		// Shading based on distance squared,
-# 		// want "decrement" from pure white when you hit maxDist
-# 		var decrement = 0.2		
-# 		var brightness = Math.floor (255 * (1 - b.distCS() * (decrement / maxDist)))
-# 		bhtml.getElementsByClassName("bookmarkBackground")[0].style.backgroundColor =
-# 			"rgb(" + brightness + "," + brightness + "," + brightness + ")"
-
-# 		// Make the bar graph
-# 		var rect = bhtml.getElementsByClassName("bar")[0]
-# 		rect.y.baseVal.value = 60*(1.-b.interest); // This "60" also appears in front.html
-# 		rect.height.baseVal.value = 60*b.interest;
+	# Sort by distance, into new temporary list, then tell UI to do it
+	ui.showBookmarks (sorted (allBookmarks, key=lambda b: b.distCS()), sendBookmark)
 
 #
 # Checkbox callback: Toggle continuous (ie on timer) view refresh
 #
+### checkbox checked
+### 	other uses for Var()?
+### 	probably not:
+### 		c= tkinter.ttk.Checkbutton (parent, text=""")
+### 		c.instate(['selected'])  # returns True if the box is checked
 def continuousCB ():
 # 	if (checkbox.checked) { ###
 		continuous = True
@@ -212,19 +196,13 @@ def continuousCB ():
 #		ui.viewButton["state"] = tkinter.NORMAL
 
 # Set up for continuous
-# Alternative = no timer, just call ViewAll() from brainCB and brainSliderCB
+# Alternative = no timer, just call ViewCB() from brainCB and brainSliderCB
 # but could be annoying because very frequent
 continuous = False
 def tick ():
 	if continuous:
-		viewAll()
+		viewCB()
 		top.after(500, tick)
-
-#
-# Callback if you click on a bookmark in the bookmarks list.
-#
-def bookmarkCB (event, bookmark):
-	sendBookmark (bookmark.url)
 
 # Install these as callbacks
 ui.saveButton["command"] = saveCB
@@ -262,7 +240,7 @@ bclientThread = threading.Thread (target=brainclient.mainloop, args=[brainCB])
 bclientThread.start()
 
 # Start this one off
-viewAll()
+viewCB()
 
 # Run our GUI loop
 ui.top.mainloop()
