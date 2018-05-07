@@ -1,12 +1,9 @@
-#!/usr/bin/env python3
+# Back end data structures and functions
+# separated out to here just for modularity
 
-import time, datetime, sys, random
+import time, datetime, sys
 import subprocess
 import tempfile
-import threading
-import tkinter   
-
-import ui, brainclient
 
 ############################################################
 # BOOKMARK AND RELATED CLASSES
@@ -19,6 +16,10 @@ class StatePoint:
 	# Arg is an array of numbers
 	def __init__ (self, args):
 		self.data = args[0:] # To get kind of a deep copy
+
+	# Return a deep copy
+	def copy (self):
+		return StatePoint (self.data)
 
 	# Square of Euclidean distance to point p
 	def dist (self, p):
@@ -39,7 +40,8 @@ class Bookmark:
 		else: self.thumb = "dummy.png"
 
 		# Brain/body state measurement to be associated with this bookmark
-		self.statePoint = currentState;
+		# need a deep copy, otherwise all the bookmarks point to same currentState object
+		self.statePoint = currentState.copy()
 
 		# An optional feature, you can ignore it.
 		# Holds 1 scalar of other brain or body state info,
@@ -57,7 +59,7 @@ class Bookmark:
 # COMMUNICATE WITH BROWSER
 ############################################################
 
-# Collects data for making a bookmark and adds the new bookmark
+# Collects data for making a bookmark
 # This is Mac OS-specific, if using another OS, write an equivalent function.
 def getBookmark ():
 	# Fetch URL from applescript
@@ -78,8 +80,8 @@ def getBookmark ():
 	if err!="": print ("Error from screencapture: " + err, file=sys.stderr)
 	callShell ("sips " + tempfilename + " -Z 70")
 
-	# Save the bookmark
-	allBookmarks.append (Bookmark (url, title, tempfilename, selection))
+	# Create a new Bookmark and return it
+	return Bookmark (url, title, tempfilename, selection)
 
 # Send a URL (given as arg) to our main browser window
 # This is Mac OS-specific, if using another OS, write an equivalent function.
@@ -103,117 +105,9 @@ def callShell (script):
 	else: return ans
 
 ############################################################
-# COMMUNICATE WITH BRAIN DEVICE
+# OUR GLOBALS AND INITIALIZATIONS
 ############################################################
 
-### TRY IT ONCE: could do it wihtout timer, just viewCB() every reading below
-###	expect too jarring
-
-
-# Call from brainclient, arg = line of text from matlab
-# This is coming from a separate thread,
-# both threads access currentBrainState and currentInterest
-# we set them, others just read them (except the GUI slider)
-# and it's a single atomic setting of a variable,
-# so synchronization issues should be ok
-def brainCB (line):
-	global currentState
-	global currentInterest
-
-	tokens = line.strip().split (",")
-	if len(tokens) < 1:
-		print ("brainCB: can't parse input line: " + line, file=sys.stderr)
-
-	else:
-		print (tokens) ### is this stuff working ok, still need print stmts?
-		currentState = StatePoint (list (map (float, tokens)))
-
-		# Optional: display it back to user via the sliders
-		print (currentState.data) ###
-		for i in range (len (currentState.data)):
-			print (currentState.data[i]) ###
-			ui.brainSliders[i].set (currentState.data[i] * 100)
-
-		# Placeholder, intend to be getting this from physio or other sensor
-		currentInterest = random.random()
-		
-# When a brainSlider is changed
-# NB our sliders run 0..100 but data from brainClient assumed to run 0..1
-def brainSliderCB (ignorearg):
-	for i in range (len (currentState.data)):
-		currentState.data[i] = ui.brainSliders[i].get()/100.0
-
-############################################################
-# UI COMMAND CALLBACKS
-############################################################
-
-#
-# Save button callback: Save current page in allBookmarks
-#
-def saveCB ():
-	pass
-# 		doXML ("getbookmark", function (responseText) {
-# 			// Parse the returned data
-# 			var url = responseText.split("\n")[0]
-# 			var title = responseText.split("\n")[1]
-# 			var tempfilename = responseText.split("\n")[2]
-# 			var selection = responseText.split("\n").slice(3).reduce (function (a,b) { return a + "\n" + b; }, "").slice (0, 200)
-# 			if (selection.trim() == "") selection = null;
-
-# 			// Save a bookmark (using current state)
-# 			allBookmarks.push (new Bookmark (url, title, tempfilename, selection))
-
-# 			// Optional: Update bookmarks display
-# 			viewCB();
-# 		})
-# 	})
-
-
-#
-# View button callback: displays all bookmarks, sorted by distance to current state
-# also used in some other places
-# 
-### improve on this rather awkward passing of sendBookmark
-def viewCB ():
-	# Sort by distance, into new temporary list, then tell UI to do it
-	ui.showBookmarks (sorted (allBookmarks, key=lambda b: b.distCS()), sendBookmark)
-
-#
-# Checkbox callback: Toggle continuous (ie on timer) view refresh
-#
-### checkbox checked
-### 	other uses for Var()?
-### 	probably not:
-### 		c= tkinter.ttk.Checkbutton (parent, text=""")
-### 		c.instate(['selected'])  # returns True if the box is checked
-def continuousCB ():
-# 	if (checkbox.checked) { ###
-		continuous = True
-		tick()
-		ui.viewButton["state"] = tkinter.DISABLED
-# 	else:
-# 		continuous = False
-#		ui.viewButton["state"] = tkinter.NORMAL
-
-# Set up for continuous
-# Alternative = no timer, just call ViewCB() from brainCB and brainSliderCB
-# but could be annoying because very frequent
-continuous = False
-def tick ():
-	if continuous:
-		viewCB()
-		top.after(500, tick)
-
-# Install these as callbacks
-ui.saveButton["command"] = saveCB
-ui.viewButton["command"] = viewCB
-ui.continuousBox["command"] = continuousCB
-for s in ui.brainSliders: s["command"] = brainSliderCB
-
-############################################################
-# GLOBALS AND INITIALIZATION
-############################################################
-		
 # Latest measurement, i.e., what we would act upon
 currentState = StatePoint ([0, 0, 0, 0, 0])
 
@@ -230,20 +124,3 @@ allBookmarks.append (Bookmark ("http://www.cs.tufts.edu/~jacob/", "Rob Jacob Hom
 currentState = StatePoint ([.4, 0, 0, 0, 0])
 allBookmarks.append (Bookmark ("http://www.tufts.edu/home/visiting_directions/", "Visiting, Maps & Directions - Tufts University", None, None))
 currentState = StatePoint ([0, 0, 0, 0, 0])
-
-############################################################
-# MAIN LOOP
-############################################################
-
-# Start up brainclient
-bclientThread = threading.Thread (target=brainclient.mainloop, args=[brainCB])
-bclientThread.start()
-
-# Start this one off
-viewCB()
-
-# Run our GUI loop
-ui.top.mainloop()
-
-# Also quit brainclient cleanly, when our window closes
-brainclient.quit = True
