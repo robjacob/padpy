@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Main program, including UI
+# Main program, including UI and callbacks
 
 import random
 import threading
@@ -54,13 +54,91 @@ def viewCB ():
 		bookmarkWidgets[i].hideBookmark()
 
 #
-# Checkbox callback: Toggle continuous view refresh
+# Observer callback, ie when value changes: Toggle continuous view refresh.
+# Actually simply setting continousVar itself is what does the job,
+# we just disable/enable the view button here
 #
-def continuousCB ():
+def continuousVarCB (*ignoreargs):
 	if continuousVar.get()==1:
 		viewButton["state"] = tkinter.DISABLED
 	else:
 		viewButton["state"] = tkinter.NORMAL
+
+############################################################
+# OTHER UI-RELATED FUNCTIONS
+############################################################
+
+###/// layout: some padding or margin??
+
+###/// ALSO CAN USE
+###/// height in lines (else fits to contents)
+###/// width (chars not pixels)
+###/// wraplength (chars) default = break only at newlines
+
+# An initially blank widget that can show data for a bookmark,
+# can be changed subsequently to show a different bookmark.
+# Doing it this way, rather than deleting the widgets and making new ones,
+# seems to avoid flashing in the UI
+class BookmarkW:
+	# Make the blank widget
+	def __init__ (self, bookmarksPanel):
+		self.bookmark = None
+		
+		self.main = tkinter.Frame (bookmarksPanel, borderwidth=1, background="grey")
+		self.main.pack (side="top", fill="both", expand=True)
+
+		self.urlw = tkinter.Label (self.main, font=('', '10', ''))
+		self.urlw.pack (side="top", fill="both", expand=True)
+
+		self.titlew = tkinter.Label (self.main, font=('', '12', 'bold'))
+		self.titlew.pack (side="top", fill="both", expand=True)
+
+		self.selectionw = tkinter.Label (self.main)
+		self.selectionw.pack (side="top", fill="both", expand=True)
+
+		self.thumbw = tkinter.Label (self.main)
+		self.thumbw.pack (side="top", fill="both", expand=True)
+
+		self.timew = tkinter.Label (self.main)
+		self.timew.pack (side="top", fill="both", expand=True)
+
+		self.distw = tkinter.Label (self.main)
+		self.distw.pack (side="top", fill="both", expand=True)
+
+		# Attach our callback to our widget and everything inside
+		self.main.bind ("<Button-1>", self.callback)
+		for child in self.main.children.values():
+			child.bind ("<Button-1>", self.callback)
+
+		# Hide ourself until someone uses us
+		self.main.pack_forget()
+
+	# Populate this widget with data from the given bookmark
+	def showBookmark (self, bookmark):
+		self.bookmark = bookmark
+
+		self.urlw["text"] = self.bookmark.url
+		self.titlew["text"] = self.bookmark.title
+		self.selectionw["text"] = self.bookmark.selection
+		###///	image = tkinter.PhotoImage (file=bookmark.thumb)
+		###///	self.thumb["image"] = image
+		self.thumbw["text"] = bookmark.thumb
+		###/// better way to show time
+### Python time interval
+### Python human readable time
+		self.timew["text"] = self.bookmark.time
+		###/// color or other way to display
+###Python scalar display Widget
+		self.distw["text"] = str(self.bookmark.statePoint.data) + "   " + str(self.bookmark.distCS())
+
+		self.main.pack()
+
+	# Hide the widget, for those we currently don't need
+	def hideBookmark (self):
+		self.main.pack_forget()
+
+	def callback (self, ignoreevent):
+		pad.sendBookmark (self.bookmark.url)
 
 ############################################################
 # COMMUNICATE WITH BRAIN DEVICE
@@ -90,100 +168,19 @@ def brainCB (line):
 		print (pad.currentState.data) ###///
 		for i in range (len (pad.currentState.data)):
 			print (pad.currentState.data[i]) ###///
-			brainSliders[i].set (pad.currentState.data[i] * 100)
+			brainVars[i].set (pad.currentState.data[i]) #/// does this trigger another callback or many?
 
 		# Placeholder, intend to be getting this from physio or other sensor
 		pad.currentInterest = random.random()
 		
 		if continuousVar.get()==1: viewCB()
 
-# When a brainSlider is changed
-# NB our sliders run 0..100 but data from brainClient assumed to run 0..1
-def brainSliderCB (ignorearg):
-	for i in range (len (pad.currentState.data)):
-		pad.currentState.data[i] = brainSliders[i].get()/100.0
+# Observer callback, ie when value of a brain slider changes
+def brainVarCB (var, index):
+	print ("brainVarCB", var, index) #/// TO TEST ABOVE --does this trigger another callback
+	pad.currentState.data[index] = var.get()
 
 	if continuousVar.get()==1: viewCB()
-
-############################################################
-# OTHER UI FUNCTIONS
-############################################################
-
-###/// layout: some padding or margin??
-
-###/// ALSO CAN USE
-###/// height in lines (else fits to contents)
-###/// width (chars not pixels)
-###/// textvariable instead of text: You can set its textvariable option to a StringVar. Then any call to the variable's .set() method will change the text displayed on the label. This is not necessary if the label's text is static; use the text attribute for labels that don't change while the application is running.
-###/// wraplength (chars) default = break only at newlines
-
-# An initially blank widget that can show data for a bookmark,
-# can be changed subsequently to show a different bookmark.
-# Doing it this way, rather than deleting the widgets and making new ones,
-# seems to avoid flashing in the UI
-class BookmarkW:
-	# Make the blank widget
-	def __init__ (self, bookmarksPanel):
-		self.bookmark = None
-		
-		self.main = tkinter.Frame (bookmarksPanel, borderwidth=1, background="grey")
-		self.main.bind ("<Button-1>", self.callback)
-		self.main.pack (side="top", fill="both", expand=True)
-
-		self.urlw = tkinter.Label (self.main, font=('', '10', ''))
-###/// do I really have to set the callback on every widget,
-###/// or is there an easier way
-###/// or at least enumerate children
-###///    for child in widget.children.values():
-
-		self.urlw.bind ("<Button-1>", self.callback)
-		self.urlw.pack (side="top", fill="both", expand=True)
-
-		self.titlew = tkinter.Label (self.main, font=('', '12', 'bold'))
-		self.titlew.bind ("<Button-1>", self.callback)
-		self.titlew.pack (side="top", fill="both", expand=True)
-
-		self.selectionw = tkinter.Label (self.main)
-		self.selectionw.bind ("<Button-1>", self.callback)
-		self.selectionw.pack (side="top", fill="both", expand=True)
-
-		self.thumbw = tkinter.Label (self.main)
-		self.thumbw.bind ("<Button-1>", self.callback)
-		self.thumbw.pack (side="top", fill="both", expand=True)
-
-		self.timew = tkinter.Label (self.main)
-		self.timew.bind ("<Button-1>", self.callback)
-		self.timew.pack (side="top", fill="both", expand=True)
-
-		self.distw = tkinter.Label (self.main)
-		self.distw.bind ("<Button-1>", self.callback)
-		self.distw.pack (side="top", fill="both", expand=True)
-
-		self.main.pack_forget()
-
-	# Populate this widget with data from the given bookmark
-	def showBookmark (self, bookmark):
-		self.bookmark = bookmark
-
-		self.urlw["text"] = self.bookmark.url
-		self.titlew["text"] = self.bookmark.title
-		self.selectionw["text"] = self.bookmark.selection
-		###///	image = tkinter.PhotoImage (file=bookmark.thumb)
-		###///	self.thumb["image"] = image
-		self.thumbw["text"] = bookmark.thumb
-		###/// better way to show time
-		self.timew["text"] = self.bookmark.time
-		###/// color or other way to display
-		self.distw["text"] = str(self.bookmark.statePoint.data) + "   " + str(self.bookmark.distCS())
-
-		self.main.pack()
-
-	# Hide the widget, for those we currently don't need
-	def hideBookmark (self):
-		self.main.pack_forget()
-
-	def callback (self, ignoreevent):
-		pad.sendBookmark (self.bookmark.url)
 
 ############################################################
 # WINDOW AND WIDGET SETUP
@@ -193,11 +190,10 @@ class BookmarkW:
 top = tkinter.Tk()
 top.title ("Brain Scratchpad Prototype")
 
-buttonFont = ('', '36', 'bold')
-
 # Control panel area
 controlPanel = tkinter.Frame (top)
 controlPanel.pack (side="top")
+buttonFont = ('', '36', 'bold')
 
 # Save button
 saveButton = tkinter.Button (controlPanel, text="Save", font=buttonFont)
@@ -212,7 +208,7 @@ viewButton.pack(side="left")
 # Toggle continuous update mode
 continuousVar = tkinter.IntVar()
 continuousBox = tkinter.Checkbutton (controlPanel, text="Update continuously", variable=continuousVar)
-continuousBox["command"] = continuousCB
+continuousVar.trace ("w", continuousVarCB)
 continuousBox.pack(side="top")
 
 # Bookmarks panel area
@@ -229,13 +225,13 @@ slidersPanel = tkinter.Frame (top, borderwidth=2, background="black")
 slidersPanel.pack (side="top")
 
 # Sliders
-###/// could try again 0..1 slider, problem was parse?
-###/// maybe use Var()'s for them?
-brainSliders = []
+# NB subscripts in brainVars match those in currentState
+brainVars = []
 for i in range (5):
-	s = tkinter.Scale (slidersPanel, from_=100, to_=0)
-	s["command"] = brainSliderCB
-	brainSliders.append (s)
+	v = tkinter.DoubleVar()
+	v.trace ("w", lambda *args, v=v, index=i: brainVarCB(v, index))
+	brainVars.append (v)
+	s = tkinter.Scale (slidersPanel, variable=v, from_=1.0, to_=0, resolution=0.1)
 	s.pack(side="left")
 
 ############################################################

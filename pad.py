@@ -1,4 +1,4 @@
-# Back end data structures and functions
+# Back end data structures and functions,
 # separated out to here just for modularity
 
 import time, datetime, sys
