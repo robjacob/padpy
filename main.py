@@ -18,7 +18,7 @@ import brainclient
 def saveCB ():
 	pad.allBookmarks.append (pad.getBookmark())
 
-	# Optional: Update bookmarks display
+	# Update bookmarks display (optional)
 	viewCB()
 
 #
@@ -28,9 +28,6 @@ def saveCB ():
 def viewCB ():
 	# Sort by distance, into new temporary list
 	bookmarks = sorted (pad.allBookmarks, key=lambda b: b.distCS())
-
-	# Plug the bookmarks into the bookmark widgets
-	ndraw = min (len(bookmarks), len(bookmarkWidgets))
 
 	# Save max distance^2 for graphic display
 	maxDist = bookmarks[-1].distCS()
@@ -46,46 +43,30 @@ def viewCB ():
 # 		rect.y.baseVal.value = 60*(1.-b.interest); // This "60" also appears in front.html
 # 		rect.height.baseVal.value = 60*b.interest;
 
+	# Plug the bookmarks into the bookmark widgets
+	ndraw = min (len(bookmarks), len(bookmarkWidgets))
+
 	for i in range (ndraw):
-		bookmarkWidgets[i].showBookmark(bookmarks[i])
+		bookmarkWidgets[i].showBookmark (bookmarks[i])
 
 	# Make the rest of them, if any, invisible
 	for i in range (ndraw, len(bookmarkWidgets)):
 		bookmarkWidgets[i].hideBookmark()
 
 #
-# Checkbox callback: Toggle continuous (ie on timer) view refresh
+# Checkbox callback: Toggle continuous view refresh
 #
-###/// checkbox checked
-###/// 	other uses for Var()?
-###/// 	probably not:
-###/// 		c= tkinter.ttk.Checkbutton (parent, text=""")
-###/// 		c.instate(['selected'])  # returns True if the box is checked
 def continuousCB ():
-# 	if continuousBox.checked ### ///
-		continuous = True
-		tick()
+	if continuousVar.get()==1:
 		viewButton["state"] = tkinter.DISABLED
-# 	else:
-# 		continuous = False
-#		viewButton["state"] = tkinter.NORMAL
-
-# Mechanism for continuous
-# Alternative = no timer, just call ViewCB() from brainCB and brainSliderCB
-# but that could be annoying because very frequent
-continuous = False
-def tick ():
-	if continuous:
-		viewCB()
-		top.after(500, tick)
+	else:
+		viewButton["state"] = tkinter.NORMAL
 
 ############################################################
 # COMMUNICATE WITH BRAIN DEVICE
 ############################################################
 
-###/// TRY IT ONCE: could do it wihtout timer, just viewCB() every reading below
-###///	expect too jarring
-
+###/// Test with brainclient, is continuous viewCBtoo jarring, prefer old timer approach??
 
 # Call from brainclient, arg = line of text from matlab
 # This is coming from a separate thread,
@@ -114,11 +95,15 @@ def brainCB (line):
 		# Placeholder, intend to be getting this from physio or other sensor
 		pad.currentInterest = random.random()
 		
+		if continuousVar.get()==1: viewCB()
+
 # When a brainSlider is changed
 # NB our sliders run 0..100 but data from brainClient assumed to run 0..1
 def brainSliderCB (ignorearg):
 	for i in range (len (pad.currentState.data)):
 		pad.currentState.data[i] = brainSliders[i].get()/100.0
+
+	if continuousVar.get()==1: viewCB()
 
 ############################################################
 # OTHER UI FUNCTIONS
@@ -149,6 +134,8 @@ class BookmarkW:
 ###/// do I really have to set the callback on every widget,
 ###/// or is there an easier way
 ###/// or at least enumerate children
+###///    for child in widget.children.values():
+
 		self.urlw.bind ("<Button-1>", self.callback)
 		self.urlw.pack (side="top", fill="both", expand=True)
 
@@ -223,7 +210,8 @@ viewButton["command"] = viewCB
 viewButton.pack(side="left")
 
 # Toggle continuous update mode
-continuousBox = tkinter.Checkbutton (controlPanel, text="Update continuously")
+continuousVar = tkinter.IntVar()
+continuousBox = tkinter.Checkbutton (controlPanel, text="Update continuously", variable=continuousVar)
 continuousBox["command"] = continuousCB
 continuousBox.pack(side="top")
 
