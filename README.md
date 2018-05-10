@@ -1,11 +1,5 @@
 # Multi-state Scratchpad Prototype
 
-## Note:
-
-UNDER CONSTRUCTION!
-
-This is a simpler, non-browser python version of "pad"
-
 ## Conceptual Design
 
 You have a list of bookmarks
@@ -84,6 +78,18 @@ And the auxiliary display reorders itself
 Nearest neighbor approach:
 Save each bookmark along with its raw data, no classifier
 
+## Versions
+
+See "padjs" for a browser-based javascript implementation.
+This is a new, simpler, non-browser python version,
+which is probably more useful.
+
+It runs as a standalone main program,
+so it can do polling, applescript, etc more easily than the browser/javascript version.
+No front end/back end, everything is in one process (but it starts and owns a thread for brainclient).
+
+However, without HTML/CSS/Javascript we are constrained to python's GUI toolkits.
+
 ## UI Implementation
 
 Main window = vanilla Safari, running independently
@@ -120,7 +126,7 @@ View
 
 Run Safari with one window
 
-python3 pad.py
+python3 main.py
 
 Compatibility and porting
 
@@ -139,29 +145,25 @@ Safari's Develop menu
 with powerscript or other code that will
 perform the same tasks
 
-## Python implementation
-
-This is a python port of ../pad.
-
-It runs as a standalone main program,
-so it can do polling, applescript, etc more easily than the browser/javascript version.
-No front end/back end, everything is in one process (but it starts and owns a thread for brainclient).
-
-Without HTML/CSS/Javascript we are constrained to python's GUI toolkits.
-
 ## Code Files
+
+### main.py
+
+Main program, including...
+
+* UI and its commands and supporting code
+
+* Communicate with brain device
+
+* Main loop, including starting brainclient thread
 
 ### pad.py
 
-Main program, including...
+Back end data structures and support functions, including...
 
 * Bookmark and related classes
 
 * Communicate with browser
-
-* UI and its commands
-
-* Main loop, including starting brainclient thread
 
 ### brainclient.py
 

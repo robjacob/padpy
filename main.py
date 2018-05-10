@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Main program, including UI and callbacks
 
+import time, datetime, sys
 import random
 import threading
 import tkinter   
@@ -23,7 +24,7 @@ def saveCB ():
 
 #
 # View button callback: displays all bookmarks, sorted by distance to current state
-# is also used in some other places
+# is also called from some other places
 # 
 def viewCB ():
 	# Sort by distance, into new temporary list
@@ -38,10 +39,10 @@ def viewCB ():
 # 		bhtml.getElementsByClassName("bookmarkBackground")[0].style.backgroundColor =
 # 			"rgb(" + brightness + "," + brightness + "," + brightness + ")"
 
-# 		// Make the bar graph
+# 		// OR USE a bar graph for distance (
 # 		var rect = bhtml.getElementsByClassName("bar")[0]
-# 		rect.y.baseVal.value = 60*(1.-b.interest); // This "60" also appears in front.html
-# 		rect.height.baseVal.value = 60*b.interest;
+# 		rect.y.baseVal.value = 60*(1.-b.DIST); // This "60" also appears in front.html
+# 		rect.height.baseVal.value = 60*b.DIST;
 
 	# Plug the bookmarks into the bookmark widgets
 	ndraw = min (len(bookmarks), len(bookmarkWidgets))
@@ -70,22 +71,28 @@ def continuousVarCB (*ignoreargs):
 
 ###/// layout: some padding or margin??
 
-###/// ALSO CAN USE
-###/// height in lines (else fits to contents)
-###/// width (chars not pixels)
-###/// wraplength (chars) default = break only at newlines
-
-# An initially blank widget that can show data for a bookmark,
+# An initially-blank widget that can show data for a bookmark,
 # can be changed subsequently to show a different bookmark.
 # Doing it this way, rather than deleting the widgets and making new ones,
 # seems to avoid flashing in the UI
 class BookmarkW:
+	# Layout parameters for our fields
+	urlWidth = 40
+	titleWidth = 40
+	selectionWidth = 40
+
 	# Make the blank widget
 	def __init__ (self, bookmarksPanel):
 		self.bookmark = None
 		
-		self.main = tkinter.Frame (bookmarksPanel, borderwidth=1, background="grey")
+		self.main = tkinter.Frame (bookmarksPanel, borderwidth=1)
 		self.main.pack (side="top", fill="both", expand=True)
+
+		self.distw = tkinter.Label (self.main)
+		self.distw.pack (side="left", fill="y", expand=True)
+
+		self.thumbw = tkinter.Canvas (self.main, width=pad.thumbSize, height=pad.thumbSize)
+		self.thumbw.pack (side="left")
 
 		self.urlw = tkinter.Label (self.main, font=('', '10', ''))
 		self.urlw.pack (side="top", fill="both", expand=True)
@@ -96,14 +103,8 @@ class BookmarkW:
 		self.selectionw = tkinter.Label (self.main)
 		self.selectionw.pack (side="top", fill="both", expand=True)
 
-		self.thumbw = tkinter.Label (self.main)
-		self.thumbw.pack (side="top", fill="both", expand=True)
-
 		self.timew = tkinter.Label (self.main)
 		self.timew.pack (side="top", fill="both", expand=True)
-
-		self.distw = tkinter.Label (self.main)
-		self.distw.pack (side="top", fill="both", expand=True)
 
 		# Attach our callback to our widget and everything inside
 		self.main.bind ("<Button-1>", self.callback)
@@ -117,19 +118,23 @@ class BookmarkW:
 	def showBookmark (self, bookmark):
 		self.bookmark = bookmark
 
-		self.urlw["text"] = self.bookmark.url
-		self.titlew["text"] = self.bookmark.title
-		self.selectionw["text"] = self.bookmark.selection
-		###///	image = tkinter.PhotoImage (file=bookmark.thumb)
-		###///	self.thumb["image"] = image
-		self.thumbw["text"] = bookmark.thumb
-		###/// better way to show time
-### Python time interval
-### Python human readable time
-		self.timew["text"] = self.bookmark.time
+#/// not quite right, use my new function self.shorten()
+###/// ALSO CAN USE
+###/// height in lines (else fits to contents)
+###/// width (chars not pixels)
+###/// wraplength (chars) default = break only at newlines
+		self.urlw["text"] = textwrap.shorten (self.bookmark.url, width=BookmarkW.urlWidth) if self.bookmark.url else ""
+#		self.titlew["text"] = self.bookmark.title[:BookmarkW.titleWidth]
+#		self.selectionw["text"] = self.bookmark.selection[:BookmarkW.selectionWidth]
+
+		self.thumbw.delete(tkinter.ALL)
+		# Preserve image variable here, cause canvas only keeps pointer to it
+		self.thumbImage = tkinter.PhotoImage (file=bookmark.thumb)
+		self.thumbw.create_image (0, 0, image=self.thumbImage, anchor=tkinter.NW)
+
+		self.timew["text"] = "%.0f" % (self.bookmark.time - pad.startTime).total_seconds()
 		###/// color or other way to display
-###Python scalar display Widget
-		self.distw["text"] = str(self.bookmark.statePoint.data) + "   " + str(self.bookmark.distCS())
+		self.distw["text"] = "%.2f" % self.bookmark.distCS()
 
 		self.main.pack()
 
@@ -137,47 +142,48 @@ class BookmarkW:
 	def hideBookmark (self):
 		self.main.pack_forget()
 
+	# Tell browser to go to our bookmarked page
 	def callback (self, ignoreevent):
 		pad.sendBookmark (self.bookmark.url)
+
+	# Helper function, truncates string to width,
+	# adding "..." if appropriate
+	# also turns None into ""
+	# Similar to textwrap.shorten()
+	def shorten (string, width):
+		if string==None:
+			return ""
+		elif len(string)<width:
+			return string
+		else:
+			return string[:width] + "..."
 
 ############################################################
 # COMMUNICATE WITH BRAIN DEVICE
 ############################################################
 
-###/// Test with brainclient, is continuous viewCBtoo jarring, prefer old timer approach??
-
 # Call from brainclient, arg = line of text from matlab
 # This is coming from a separate thread,
-# both threads access currentBrainState and currentInterest
-# we set them, others just read them (except the GUI slider)
+# both threads access currentBrainState
+# we set it, others just read it (except the GUI slider)
 # and it's a single atomic setting of a variable,
 # so synchronization issues should be ok
 def brainCB (line):
-###///	global currentState
-###///	global currentInterest
-
 	tokens = line.strip().split (",")
 	if len(tokens) < 1:
 		print ("brainCB: can't parse input line: " + line, file=sys.stderr)
 
 	else:
-		print (tokens) ###/// is this stuff working ok, still need print stmts?
-		pad.currentState = StatePoint (list (map (float, tokens)))
+		pad.currentState = pad.StatePoint (list (map (float, tokens)))
 
-		# Optional: display it back to user via the sliders
-		print (pad.currentState.data) ###///
+		# Display it back to user via the sliders
 		for i in range (len (pad.currentState.data)):
-			print (pad.currentState.data[i]) ###///
-			brainVars[i].set (pad.currentState.data[i]) #/// does this trigger another callback or many?
+			brainVars[i].set (pad.currentState.data[i])
 
-		# Placeholder, intend to be getting this from physio or other sensor
-		pad.currentInterest = random.random()
-		
-		if continuousVar.get()==1: viewCB()
+		# ...which will also trigger a viewCB() so no need for us to call it
 
-# Observer callback, ie when value of a brain slider changes
+# Observer callback, ie when value of a brain slider variable changes
 def brainVarCB (var, index):
-	print ("brainVarCB", var, index) #/// TO TEST ABOVE --does this trigger another callback
 	pad.currentState.data[index] = var.get()
 
 	if continuousVar.get()==1: viewCB()
@@ -215,14 +221,14 @@ continuousBox.pack(side="top")
 bookmarksPanel = tkinter.Frame (top)
 bookmarksPanel.pack (side="top")
 
-# Empty widgets, each can show a bookmark, max of 5
+# Empty widgets, each can show a bookmark, max of 5 for now
 bookmarkWidgets = []
 for i in range (5):
 	bookmarkWidgets.append (BookmarkW (bookmarksPanel))
 
 # Sliders panel area
-slidersPanel = tkinter.Frame (top, borderwidth=2, background="black")
-slidersPanel.pack (side="top")
+slidersFrame = tkinter.LabelFrame (top, text="Brain input")
+slidersFrame.pack (side="top")
 
 # Sliders
 # NB subscripts in brainVars match those in currentState
@@ -231,7 +237,7 @@ for i in range (5):
 	v = tkinter.DoubleVar()
 	v.trace ("w", lambda *args, v=v, index=i: brainVarCB(v, index))
 	brainVars.append (v)
-	s = tkinter.Scale (slidersPanel, variable=v, from_=1.0, to_=0, resolution=0.1)
+	s = tkinter.Scale (slidersFrame, variable=v, from_=1.0, to_=0, resolution=0.1)
 	s.pack(side="left")
 
 ############################################################
@@ -239,14 +245,14 @@ for i in range (5):
 ############################################################
 
 # Start up brainclient
-bclientThread = threading.Thread (target=brainclient.mainloop, args=[brainCB])
+b = bclientThread = threading.Thread (target=brainclient.mainloop, args=[brainCB])
 bclientThread.start()
 
-# Start this one off
+# Start things off
 viewCB()
 
 # Run our GUI loop
 top.mainloop()
 
-# Also quit brainclient cleanly, when our window closes
+# To quit brainclient cleanly, after our main window closes
 brainclient.quit = True

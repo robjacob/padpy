@@ -5,6 +5,9 @@ import time, datetime, sys
 import subprocess
 import tempfile
 
+# Parameter
+thumbSize =  70
+
 ############################################################
 # BOOKMARK AND RELATED CLASSES
 ############################################################
@@ -37,18 +40,18 @@ class Bookmark:
 		# Filename (temporary file) of thumbnail
 		# or placeholder dummy file
 		if thumb: self.thumb = thumb
-		else: self.thumb = "dummy.png"
+		else: self.thumb = "dummy.gif"
 
 		# Brain/body state measurement to be associated with this bookmark
 		# need a deep copy, otherwise all the bookmarks point to same currentState object
 		self.statePoint = currentState.copy()
 
 		# An optional feature, you can ignore it.
-		# Holds 1 scalar of other brain or body state info,
+		# Could hold 1 scalar of other brain or body state info,
 		# for gradient bookmark retrieval
-		self.interest = currentInterest;
+		self.interest = 0
 
-		# We set this one ourselves
+		# We set this one ourselves upon creation
 		self.time = datetime.datetime.today()
 
 	# Squared distance to currentState, calculated on the fly
@@ -75,13 +78,14 @@ def getBookmark ():
 
 	# Fetch thumbnail (screendump the window, save to file, scale image, save file name to pass to front end)
 	windowid = callApplescript ('tell application "Safari" to get id of item 1 of (get every window)')
-	tempfilename = tempfile.mkstemp(prefix="proj.brain.proto.pad.", suffix=".png")[1]
-	err = callShell ("screencapture -l" + windowid + " " + tempfilename)
+	temppngfilename = tempfile.mkstemp(prefix="proj.brain.proto.pad", suffix=".png")[1]
+	tempgiffilename = tempfile.mkstemp(prefix="proj.brain.proto.pad", suffix=".gif")[1]
+	err = callShell ("screencapture -l" + windowid + " " + temppngfilename)
 	if err!="": print ("Error from screencapture: " + err, file=sys.stderr)
-	callShell ("sips " + tempfilename + " -Z 70")
+	callShell ("sips " + temppngfilename + " -Z " + str(thumbSize) + " -s format gif --out " + tempgiffilename)
 
 	# Create a new Bookmark and return it
-	return Bookmark (url, title, tempfilename, selection)
+	return Bookmark (url, title, tempgiffilename, selection)
 
 # Send a URL (given as arg) to our main browser window
 # This is Mac OS-specific, if using another OS, write an equivalent function.
@@ -108,11 +112,11 @@ def callShell (script):
 # OUR GLOBALS AND INITIALIZATIONS
 ############################################################
 
-# Latest measurement, i.e., what we would act upon
+# Latest measurement, i.e., what we would act upon for Save or View
 currentState = StatePoint ([0, 0, 0, 0, 0])
 
-# Ditto, but just a placeholder for now
-currentInterest = 0.5
+# When this program started, for displaying bookmark times
+startTime = datetime.datetime.today()
 
 # The main list
 allBookmarks = []
