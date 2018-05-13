@@ -115,9 +115,6 @@ def callShell (script):
 # Latest measurement, i.e., what we would act upon for Save or View
 currentState = StatePoint ([0, 0, 0, 0, 0])
 
-# When this program started, for displaying bookmark times
-startTime = datetime.datetime.today()
-
 # The main list
 allBookmarks = []
 

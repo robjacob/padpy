@@ -30,20 +30,6 @@ def viewCB ():
 	# Sort by distance, into new temporary list
 	bookmarks = sorted (pad.allBookmarks, key=lambda b: b.distCS())
 
-	# Save max distance^2 for graphic display
-	maxDist = bookmarks[-1].distCS()
-# 		// Shading based on distance squared,
-# 		// want "decrement" from pure white when you hit maxDist
-# 		var decrement = 0.2		
-# 		var brightness = Math.floor (255 * (1 - b.distCS() * (decrement / maxDist)))
-# 		bhtml.getElementsByClassName("bookmarkBackground")[0].style.backgroundColor =
-# 			"rgb(" + brightness + "," + brightness + "," + brightness + ")"
-
-# 		// OR USE a bar graph for distance (
-# 		var rect = bhtml.getElementsByClassName("bar")[0]
-# 		rect.y.baseVal.value = 60*(1.-b.DIST); // This "60" also appears in front.html
-# 		rect.height.baseVal.value = 60*b.DIST;
-
 	# Plug the bookmarks into the bookmark widgets
 	ndraw = min (len(bookmarks), len(bookmarkWidgets))
 
@@ -69,88 +55,107 @@ def continuousVarCB (*ignoreargs):
 # OTHER UI-RELATED FUNCTIONS
 ############################################################
 
-###/// layout: some padding or margin??
+# Layout parameters
+# NB See pad.thumbSize for pixel size of our [square] thumbnails
+padding = 3
+barWidth = 20
+barHeight = pad.thumbSize
+urlWidth = 40
+titleWidth = 40
+selectionWidth = 40
 
 # An initially-blank widget that can show data for a bookmark,
 # can be changed subsequently to show a different bookmark.
 # Doing it this way, rather than deleting the widgets and making new ones,
 # seems to avoid flashing in the UI
 class BookmarkW:
-	# Layout parameters for our fields
-	urlWidth = 40
-	titleWidth = 40
-	selectionWidth = 40
-
 	# Make the blank widget
 	def __init__ (self, bookmarksPanel):
 		self.bookmark = None
 		
-		self.main = tkinter.Frame (bookmarksPanel, borderwidth=1)
-		self.main.pack (side="top", fill="both", expand=True)
+		# Gives nicer looking grey border than usual tkinter.Frame (..., relief="solid", borderwidth=1)
+		self.main = tkinter.LabelFrame (bookmarksPanel)
+		# Set our grid parameters below not here
+		self.main.grid (row=0, column=0)
 
-		self.distw = tkinter.Label (self.main)
-		self.distw.pack (side="left", fill="y", expand=True)
+		leftGrid = tkinter.Frame (self.main)
+		leftGrid.grid (row=0, column=0, padx=padding, pady=padding)
 
-		self.thumbw = tkinter.Canvas (self.main, width=pad.thumbSize, height=pad.thumbSize)
-		self.thumbw.pack (side="left")
+		rightGrid = tkinter.Frame (self.main)
+		rightGrid.grid (row=0, column=1, padx=padding, pady=padding)
 
-		self.urlw = tkinter.Label (self.main, font=('', '10', ''))
-		self.urlw.pack (side="top", fill="both", expand=True)
+		self.distw = tkinter.Canvas (leftGrid, width=barWidth, height=barHeight)
+		self.distw.grid (row=0, column=0, padx=padding, pady=padding)
 
-		self.titlew = tkinter.Label (self.main, font=('', '12', 'bold'))
-		self.titlew.pack (side="top", fill="both", expand=True)
+		self.thumbw = tkinter.Canvas (leftGrid, width=pad.thumbSize, height=pad.thumbSize)
+		self.thumbw.grid (row=0, column=1, padx=padding, pady=padding)
 
-		self.selectionw = tkinter.Label (self.main)
-		self.selectionw.pack (side="top", fill="both", expand=True)
+		self.titlew = tkinter.Label (rightGrid, font=('', '12', 'bold'))
+		self.titlew.grid (sticky=tkinter.W+tkinter.N, padx=padding)
+		
+		self.urlw = tkinter.Label (rightGrid, font=('', '10', ''))
+		self.urlw.grid (sticky=tkinter.W+tkinter.N, padx=padding)
 
-		self.timew = tkinter.Label (self.main)
-		self.timew.pack (side="top", fill="both", expand=True)
+		self.timew = tkinter.Label (rightGrid)
+		self.timew.grid (sticky=tkinter.W+tkinter.N, padx=padding)
+
+		self.selectionw = tkinter.Label (rightGrid, font=('', '10', 'italic'), fg="grey40")
+		self.selectionw.grid (sticky=tkinter.W+tkinter.N, padx=padding)
 
 		# Attach our callback to our widget and everything inside
-		self.main.bind ("<Button-1>", self.callback)
-		for child in self.main.children.values():
-			child.bind ("<Button-1>", self.callback)
+		self._bindAll (self.main, "<Button-1>")
 
 		# Hide ourself until someone uses us
-		self.main.pack_forget()
+		self.main.grid_forget()
+
+	# Private helper function, for recursive binding
+	def _bindAll (self, root, event):
+		root.bind (event, self.callback)
+		if len(root.children.values())>0:
+			for child in root.children.values():
+				self._bindAll (child, event)
 
 	# Populate this widget with data from the given bookmark
 	def showBookmark (self, bookmark):
 		self.bookmark = bookmark
 
-#/// not quite right, use my new function self.shorten()
-###/// ALSO CAN USE
-###/// height in lines (else fits to contents)
-###/// width (chars not pixels)
-###/// wraplength (chars) default = break only at newlines
-		self.urlw["text"] = textwrap.shorten (self.bookmark.url, width=BookmarkW.urlWidth) if self.bookmark.url else ""
-#		self.titlew["text"] = self.bookmark.title[:BookmarkW.titleWidth]
-#		self.selectionw["text"] = self.bookmark.selection[:BookmarkW.selectionWidth]
+		# Make bar graph for distance
+		self.distw.delete(tkinter.ALL)
+		# 2 is arbitrary fudge factor
+		cutoffDist = len(brainVars)/2
+		y = barHeight * (self.bookmark.distCS()/cutoffDist)
+		# Seems to need 3 pixels padding else outline doesn't show up
+		self.distw.create_rectangle(3, 3, barWidth, barHeight)
+		self.distw.create_rectangle(3, y, barWidth, barHeight, fill="indian red")
 
-		self.thumbw.delete(tkinter.ALL)
-		# Preserve image variable here, cause canvas only keeps pointer to it
+		# Thumbnail
+		# Preserve image as ivar, cause canvas only keeps pointer to it
 		self.thumbImage = tkinter.PhotoImage (file=bookmark.thumb)
+		self.thumbw.delete(tkinter.ALL)
 		self.thumbw.create_image (0, 0, image=self.thumbImage, anchor=tkinter.NW)
 
-		self.timew["text"] = "%.0f" % (self.bookmark.time - pad.startTime).total_seconds()
-		###/// color or other way to display
-		self.distw["text"] = "%.2f" % self.bookmark.distCS()
+		# Text fields
+		self.titlew["text"] = self._shorten (self.bookmark.title, titleWidth)
+		self.urlw["text"] = self._shorten (self.bookmark.url, urlWidth)
+		self.selectionw["text"] = self._shorten (self.bookmark.selection, selectionWidth)
+		self.timew["text"] = "%.0f sec. ago" % (datetime.datetime.today() - self.bookmark.time).total_seconds()
 
-		self.main.pack()
+		# Set our parameters here not above
+		self.main.grid(pady=2, sticky=tkinter.E + tkinter.W)
 
 	# Hide the widget, for those we currently don't need
 	def hideBookmark (self):
-		self.main.pack_forget()
+		self.main.grid_forget()
 
 	# Tell browser to go to our bookmarked page
 	def callback (self, ignoreevent):
 		pad.sendBookmark (self.bookmark.url)
 
-	# Helper function, truncates string to width,
+	# Private helper function, truncates string to width,
 	# adding "..." if appropriate
 	# also turns None into ""
 	# Similar to textwrap.shorten()
-	def shorten (string, width):
+	def _shorten (self, string, width):
 		if string==None:
 			return ""
 		elif len(string)<width:
@@ -198,28 +203,28 @@ top.title ("Brain Scratchpad Prototype")
 
 # Control panel area
 controlPanel = tkinter.Frame (top)
-controlPanel.pack (side="top")
-buttonFont = ('', '36', 'bold')
+controlPanel.grid (row=0, column=0)
+buttonFont = ('', '24', 'bold')
 
 # Save button
 saveButton = tkinter.Button (controlPanel, text="Save", font=buttonFont)
 saveButton["command"] = saveCB
-saveButton.pack(side="left")
+saveButton.grid (row=0, column=0)
 
 # View button, only applies if not in continuous update mode
 viewButton = tkinter.Button (controlPanel, text = "View", font=buttonFont)
 viewButton["command"] = viewCB
-viewButton.pack(side="left")
+viewButton.grid (row=0, column=1)
 
 # Toggle continuous update mode
 continuousVar = tkinter.IntVar()
 continuousBox = tkinter.Checkbutton (controlPanel, text="Update continuously", variable=continuousVar)
 continuousVar.trace ("w", continuousVarCB)
-continuousBox.pack(side="top")
+continuousBox.grid (row=0, column=2)
 
 # Bookmarks panel area
 bookmarksPanel = tkinter.Frame (top)
-bookmarksPanel.pack (side="top")
+bookmarksPanel.grid (row=1, column=0)
 
 # Empty widgets, each can show a bookmark, max of 5 for now
 bookmarkWidgets = []
@@ -228,7 +233,7 @@ for i in range (5):
 
 # Sliders panel area
 slidersFrame = tkinter.LabelFrame (top, text="Brain input")
-slidersFrame.pack (side="top")
+slidersFrame.grid (row=2, column=0)
 
 # Sliders
 # NB subscripts in brainVars match those in currentState
@@ -238,7 +243,7 @@ for i in range (5):
 	v.trace ("w", lambda *args, v=v, index=i: brainVarCB(v, index))
 	brainVars.append (v)
 	s = tkinter.Scale (slidersFrame, variable=v, from_=1.0, to_=0, resolution=0.1)
-	s.pack(side="left")
+	s.grid (row=0, column=i)
 
 ############################################################
 # MAIN LOOP
