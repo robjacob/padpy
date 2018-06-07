@@ -58,8 +58,8 @@ def continuousVarCB (*ignoreargs):
 # Layout parameters
 # NB See pad.thumbSize for pixel size of our [square] thumbnails
 padding = 3
-barWidth = 20
-barHeight = pad.thumbSize
+barWidth = 15
+barHeight = pad.thumbSize - 5
 urlWidth = 40
 titleWidth = 40
 selectionWidth = 40
@@ -126,7 +126,7 @@ class BookmarkW:
 		y = barHeight * (self.bookmark.distCS()/cutoffDist)
 		# Seems to need 3 pixels padding else outline doesn't show up
 		self.distw.create_rectangle(3, 3, barWidth, barHeight)
-		self.distw.create_rectangle(3, y, barWidth, barHeight, fill="indian red")
+		self.distw.create_rectangle(3, y, barWidth, barHeight, fill="indian red", outline="")
 
 		# Thumbnail
 		# Preserve image as ivar, cause canvas only keeps pointer to it
