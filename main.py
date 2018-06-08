@@ -59,9 +59,9 @@ def continuousVarCB (*ignoreargs):
 # NB See pad.thumbSize for pixel size of our [square] thumbnails
 padding = 3
 barWidth = 15
-barHeight = pad.thumbSize - 5
+barHeight = pad.thumbSize - 10
+titleWidth = 30
 urlWidth = 40
-titleWidth = 40
 selectionWidth = 40
 
 # An initially-blank widget that can show data for a bookmark,
@@ -74,8 +74,8 @@ class BookmarkW:
 		self.bookmark = None
 		
 		# Gives nicer looking grey border than usual tkinter.Frame (..., relief="solid", borderwidth=1)
-		self.main = tkinter.LabelFrame (bookmarksPanel)
-		# Set our grid parameters below not here
+		self.main = tkinter.LabelFrame (bookmarksPanel, borderwidth=1)
+		# Set our grid() parameters below not here
 		self.main.grid (row=0, column=0)
 
 		leftGrid = tkinter.Frame (self.main)
@@ -90,14 +90,14 @@ class BookmarkW:
 		self.thumbw = tkinter.Canvas (leftGrid, width=pad.thumbSize, height=pad.thumbSize)
 		self.thumbw.grid (row=0, column=1, padx=padding, pady=padding)
 
-		self.titlew = tkinter.Label (rightGrid, font=('', '12', 'bold'))
+		self.titlew = tkinter.Label (rightGrid, font=('', '18', ''))
 		self.titlew.grid (sticky=tkinter.W+tkinter.N, padx=padding)
 		
+		self.timew = tkinter.Label (rightGrid, foreground="grey50")
+		self.timew.grid (sticky=tkinter.W+tkinter.N, padx=padding)
+
 		self.urlw = tkinter.Label (rightGrid, font=('', '10', ''))
 		self.urlw.grid (sticky=tkinter.W+tkinter.N, padx=padding)
-
-		self.timew = tkinter.Label (rightGrid)
-		self.timew.grid (sticky=tkinter.W+tkinter.N, padx=padding)
 
 		self.selectionw = tkinter.Label (rightGrid, font=('', '10', 'italic'), fg="grey40")
 		self.selectionw.grid (sticky=tkinter.W+tkinter.N, padx=padding)
@@ -141,7 +141,7 @@ class BookmarkW:
 		self.timew["text"] = "%.0f sec. ago" % (datetime.datetime.today() - self.bookmark.time).total_seconds()
 
 		# Set our parameters here not above
-		self.main.grid(pady=2, sticky=tkinter.E + tkinter.W)
+		self.main.grid (sticky=tkinter.E + tkinter.W)
 
 	# Hide the widget, for those we currently don't need
 	def hideBookmark (self):
