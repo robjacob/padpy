@@ -4,7 +4,8 @@
 import time, datetime, sys
 import random
 import threading
-import tkinter   
+import tkinter as tk
+import tkinter.ttk as ttk
 
 import pad
 import brainclient
@@ -47,9 +48,9 @@ def viewCB ():
 #
 def continuousVarCB (*ignoreargs):
 	if continuousVar.get()==1:
-		viewButton["state"] = tkinter.DISABLED
+		viewButton["state"] = tk.DISABLED
 	else:
-		viewButton["state"] = tkinter.NORMAL
+		viewButton["state"] = tk.NORMAL
 
 ############################################################
 # OTHER UI-RELATED FUNCTIONS
@@ -57,7 +58,10 @@ def continuousVarCB (*ignoreargs):
 
 # Layout parameters
 # NB See pad.thumbSize for pixel size of our [square] thumbnails
+buttonPadding=[30, 20, 30, 20]
 padding = 3
+allPadding = [padding, padding, padding, padding]
+xPadding = [padding, 0, padding, 0]
 barWidth = 15
 barHeight = pad.thumbSize - 10
 titleWidth = 30
@@ -73,34 +77,44 @@ class BookmarkW:
 	def __init__ (self, bookmarksPanel):
 		self.bookmark = None
 		
-		# Gives nicer looking grey border than usual tkinter.Frame (..., relief="solid", borderwidth=1)
-		self.main = tkinter.LabelFrame (bookmarksPanel, borderwidth=1)
-		# Set our grid() parameters below not here
+		style = ttk.Style()
+
+		self.main = ttk.Frame (bookmarksPanel)
+		# We will set our grid() parameters below not here
 		self.main.grid (row=0, column=0)
 
-		leftGrid = tkinter.Frame (self.main)
-		leftGrid.grid (row=0, column=0, padx=padding, pady=padding)
+		self.main.grid_rowconfigure(0, weight=1)
+		sep = ttk.Separator (self.main, orient="horizontal")
+		sep.grid (row=0, column=0, sticky="ew", columnspan=2)
 
-		rightGrid = tkinter.Frame (self.main)
-		rightGrid.grid (row=0, column=1, padx=padding, pady=padding)
+		style.configure ("bm.TFrame", padding=allPadding)
+		leftGrid = ttk.Frame (self.main, style="bm.TFrame")
+		leftGrid.grid (row=1, column=0)
 
-		self.distw = tkinter.Canvas (leftGrid, width=barWidth, height=barHeight)
+		rightGrid = ttk.Frame (self.main, style="bm.TFrame")
+		rightGrid.grid (row=1, column=1)
+
+		self.distw = tk.Canvas (leftGrid, width=barWidth, height=barHeight)
 		self.distw.grid (row=0, column=0, padx=padding, pady=padding)
 
-		self.thumbw = tkinter.Canvas (leftGrid, width=pad.thumbSize, height=pad.thumbSize)
+		self.thumbw = tk.Canvas (leftGrid, width=pad.thumbSize, height=pad.thumbSize)
 		self.thumbw.grid (row=0, column=1, padx=padding, pady=padding)
 
-		self.titlew = tkinter.Label (rightGrid, font=('', '18', ''))
-		self.titlew.grid (sticky=tkinter.W+tkinter.N, padx=padding)
-		
-		self.timew = tkinter.Label (rightGrid, foreground="grey50")
-		self.timew.grid (sticky=tkinter.W+tkinter.N, padx=padding)
+		style.configure ("title.TLabel", padding=xPadding, font=('', '16', 'bold'))
+		self.titlew = ttk.Label (rightGrid, style="title.TLabel")
+		self.titlew.grid (sticky=tk.W+tk.N)
 
-		self.urlw = tkinter.Label (rightGrid, font=('', '10', ''))
-		self.urlw.grid (sticky=tkinter.W+tkinter.N, padx=padding)
+		style.configure ("time.TLabel", padding=xPadding, foreground="grey50")
+		self.timew = ttk.Label (rightGrid, style="time.TLabel")
+		self.timew.grid (sticky=tk.W+tk.N)
 
-		self.selectionw = tkinter.Label (rightGrid, font=('', '10', 'italic'), fg="grey40")
-		self.selectionw.grid (sticky=tkinter.W+tkinter.N, padx=padding)
+		style.configure ("url.TLabel", padding=xPadding, font=('', '10', ''))
+		self.urlw = ttk.Label (rightGrid, style="url.TLabel")
+		self.urlw.grid (sticky=tk.W+tk.N)
+
+		style.configure ("selection.TLabel", font=('', '10', 'italic'), fg="grey40", padding=allPadding)
+		self.selectionw = ttk.Label (rightGrid, style="selection.TLabel")
+		self.selectionw.grid (sticky=tk.W+tk.N)
 
 		# Attach our callback to our widget and everything inside
 		self._bindAll (self.main, "<Button-1>")
@@ -120,7 +134,7 @@ class BookmarkW:
 		self.bookmark = bookmark
 
 		# Make bar graph for distance
-		self.distw.delete(tkinter.ALL)
+		self.distw.delete(tk.ALL)
 		# 2 is arbitrary fudge factor
 		cutoffDist = len(brainVars)/2
 		y = barHeight * (self.bookmark.distCS()/cutoffDist)
@@ -130,9 +144,9 @@ class BookmarkW:
 
 		# Thumbnail
 		# Preserve image as ivar, cause canvas only keeps pointer to it
-		self.thumbImage = tkinter.PhotoImage (file=bookmark.thumb)
-		self.thumbw.delete(tkinter.ALL)
-		self.thumbw.create_image (0, 0, image=self.thumbImage, anchor=tkinter.NW)
+		self.thumbImage = tk.PhotoImage (file=bookmark.thumb)
+		self.thumbw.delete(tk.ALL)
+		self.thumbw.create_image (0, 0, image=self.thumbImage, anchor=tk.NW)
 
 		# Text fields
 		self.titlew["text"] = self._shorten (self.bookmark.title, titleWidth)
@@ -141,7 +155,7 @@ class BookmarkW:
 		self.timew["text"] = "%.0f sec. ago" % (datetime.datetime.today() - self.bookmark.time).total_seconds()
 
 		# Set our parameters here not above
-		self.main.grid (sticky=tkinter.E + tkinter.W)
+		self.main.grid (sticky=tk.E + tk.W)
 
 	# Hide the widget, for those we currently don't need
 	def hideBookmark (self):
@@ -198,33 +212,38 @@ def brainVarCB (var, index):
 ############################################################
 
 # Main window
-top = tkinter.Tk()
+top = tk.Tk()
 top.title ("Brain Scratchpad Prototype")
 
 # Control panel area
-controlPanel = tkinter.Frame (top)
+controlPanel = ttk.Frame (top)
 controlPanel.grid (row=0, column=0)
-buttonFont = ('', '24', 'bold')
 
-# Save button
-saveButton = tkinter.Button (controlPanel, text="Save", font=buttonFont)
-saveButton["command"] = saveCB
-saveButton.grid (row=0, column=0)
+# Our button style
+style = ttk.Style()
+style.configure ("cp.TButton",
+	 font=('', 24, 'bold'), foreground="saddlebrown", padding=buttonPadding)
 
 # View button, only applies if not in continuous update mode
-viewButton = tkinter.Button (controlPanel, text = "View", font=buttonFont)
+viewButton = ttk.Button (controlPanel, text = "View", style="cp.TButton")
 viewButton["command"] = viewCB
-viewButton.grid (row=0, column=1)
+viewButton.grid (row=0, column=0)
+
+# Save button
+saveButton = ttk.Button (controlPanel, text="Save", style="cp.TButton")
+saveButton["command"] = saveCB
+saveButton.grid (row=0, column=1)
 
 # Toggle continuous update mode
-continuousVar = tkinter.IntVar()
-continuousBox = tkinter.Checkbutton (controlPanel, text="Update continuously", variable=continuousVar)
+continuousVar = tk.IntVar()
+style.configure ("cp.TCheckbutton", foreground="saddlebrown")
+continuousBox = ttk.Checkbutton (controlPanel, text="Update continuously", variable=continuousVar, style="cp.TCheckbutton")
 continuousVar.trace ("w", continuousVarCB)
-continuousBox.grid (row=0, column=2)
+continuousBox.grid (row=1, column=0, columnspan=2, sticky="we")
 
 # Bookmarks panel area
-bookmarksPanel = tkinter.Frame (top)
-bookmarksPanel.grid (row=1, column=0)
+bookmarksPanel = ttk.Frame (top)
+bookmarksPanel.grid (row=2, column=0, pady=20)
 
 # Empty widgets, each can show a bookmark, max of 5 for now
 bookmarkWidgets = []
@@ -232,17 +251,17 @@ for i in range (5):
 	bookmarkWidgets.append (BookmarkW (bookmarksPanel))
 
 # Sliders panel area
-slidersFrame = tkinter.LabelFrame (top, text="Brain input")
-slidersFrame.grid (row=2, column=0)
+slidersFrame = tk.LabelFrame (top, text="Brain input")
+slidersFrame.grid (row=3, column=0, pady=20, sticky="we")
 
 # Sliders
 # NB subscripts in brainVars match those in currentState
 brainVars = []
 for i in range (5):
-	v = tkinter.DoubleVar()
+	v = tk.DoubleVar()
 	v.trace ("w", lambda *args, v=v, index=i: brainVarCB(v, index))
 	brainVars.append (v)
-	s = tkinter.Scale (slidersFrame, variable=v, from_=1.0, to_=0, resolution=0.1)
+	s = tk.Scale (slidersFrame, variable=v, from_=1.0, to_=0, resolution=0.1)
 	s.grid (row=0, column=i)
 
 ############################################################
