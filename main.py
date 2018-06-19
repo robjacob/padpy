@@ -43,14 +43,42 @@ def viewCB ():
 
 #
 # Observer callback, ie when value changes: Toggle continuous view refresh.
-# Actually simply setting continousVar itself is what does the job,
+# Actually simply setting continousViewVar itself is what does the job,
 # we just disable/enable the view button here
 #
-def continuousVarCB (*ignoreargs):
-	if continuousVar.get()==1:
+def continuousViewVarCB (*ignoreargs):
+	if continuousViewVar.get()==1:
+		# Optional if brain data is streaming anyway, jus to start us off
+		viewCB()
+
 		viewButton["state"] = tk.DISABLED
 	else:
 		viewButton["state"] = tk.NORMAL
+
+#
+# Similar, for save
+#
+def continuousSaveVarCB (*ignoreargs):
+	if continuousSaveVar.get()==1:
+		continuousSaveTick ()
+		saveButton["state"] = tk.DISABLED
+	else:
+		saveButton["state"] = tk.NORMAL
+
+#
+# Timer callback for continousSave
+# Set up callback 
+# Receive tick, do the job, then set up the next callback
+#
+def continuousSaveTick ():
+	if continuousSaveVar.get()==1:
+		bookmark = pad.getBookmark()
+		if bookmark.url not in map (lambda b: b.url, pad.allBookmarks):
+			pad.allBookmarks.append (bookmark)
+			viewCB()
+		# else: maybe update brain state data of this bookmark in allBookmarks (or delete and replace it)
+
+		top.after (1000, continuousSaveTick)
 
 ############################################################
 # OTHER UI-RELATED FUNCTIONS
@@ -205,7 +233,7 @@ def brainCB (line):
 def brainVarCB (var, index):
 	pad.currentState.data[index] = var.get()
 
-	if continuousVar.get()==1: viewCB()
+	if continuousViewVar.get()==1: viewCB()
 
 ############################################################
 # WINDOW AND WIDGET SETUP
@@ -224,7 +252,7 @@ style = ttk.Style()
 style.configure ("cp.TButton",
 	 font=('', 24, 'bold'), foreground="saddlebrown", padding=buttonPadding)
 
-# View button, only applies if not in continuous update mode
+# View button, only applies if not in continuous view update mode
 viewButton = ttk.Button (controlPanel, text = "View", style="cp.TButton")
 viewButton["command"] = viewCB
 viewButton.grid (row=0, column=0)
@@ -235,11 +263,18 @@ saveButton["command"] = saveCB
 saveButton.grid (row=0, column=1)
 
 # Toggle continuous update mode
-continuousVar = tk.IntVar()
+continuousViewVar = tk.IntVar()
 style.configure ("cp.TCheckbutton", foreground="saddlebrown")
-continuousBox = ttk.Checkbutton (controlPanel, text="Update continuously", variable=continuousVar, style="cp.TCheckbutton")
-continuousVar.trace ("w", continuousVarCB)
-continuousBox.grid (row=1, column=0, columnspan=2, sticky="we")
+continuousViewBox = ttk.Checkbutton (controlPanel, text="Update continuously", variable=continuousViewVar, style="cp.TCheckbutton")
+continuousViewVar.trace ("w", continuousViewVarCB)
+continuousViewBox.grid (row=1, column=0)
+
+# Toggle continuous save mode
+continuousSaveVar = tk.IntVar()
+style.configure ("cp.TCheckbutton", foreground="saddlebrown")
+continuousSaveBox = ttk.Checkbutton (controlPanel, text="Save continuously", variable=continuousSaveVar, style="cp.TCheckbutton")
+continuousSaveVar.trace ("w", continuousSaveVarCB)
+continuousSaveBox.grid (row=1, column=1)
 
 # Bookmarks panel area
 bookmarksPanel = ttk.Frame (top)
