@@ -1,17 +1,40 @@
 # Multi-state Scratchpad Prototype
 
+## Usage (on Mac)
+
+Run Safari with one window
+
+python3 main.py
+
+### Compatibility and porting:
+
+* This system is currently implemented for Mac, using Safari.
+
+    * You may need to set 'Allow JavaScript from Apple Events' option in
+Safari's Develop menu
+
+* Should work with different browsers on Mac: 
+
+    * Change the Applescript commands as noted
+
+* Should work on windows:
+
+    * Replace the Applescript commands
+with powerscript or any other code that will
+perform the same tasks
+
 ## Conceptual Design
 
-You have a list of bookmarks
+You have a list of web browser bookmarks
 
-* Each is associated with a raw brain state or other reading,
-no classifiers, just index by set of features.
+* Each is associated with a raw brain state or other passive reading.
+There are no classifiers, we just index the bookmarks by the raw set of features of the data.
 
-* They are always displayed, in an auxiliary window, but they are ordered
-by how close they are to your current state.
+* Bookmarks are displayed continuously, in our window,
+ordered by how close they are to your current state.
 
 * You can bookmark additional pages and have them associated
-with your current state.
+with your state at the time of bookmarking.
 
 ### Brain:
 
@@ -20,41 +43,52 @@ The selection by brain state applies to both input and output:
 * Save: when you bookmark something, brain state determines
 where in the ordered list it goes.
 
-* View: When you request information, brain determines
-ordering of the bookmarks, ie the ones associated
+* View: When you request information, brain state determines
+the ordering of the bookmarks, ie the ones associated
 with similar (nearest neighbor) states to your current
-state.
-
-Maybe we use context and other information as well as
-brain state to choose among several bookmarks or group or
-configurations, thinking again back to
-activity-based window managers as an analogy
-
-Some state info could be physiological and some could be brain
-
-The bookmarks are also marked with an (orthogonal)
-dimension of interest or arousal, currently not implemented.
-
-### Further:
-Have some explicit index terms for the bookmarks, eg 5:
-
-* Select content, Hit Save,
-
-* Think of one of 5 predefined distinctive thoughts
-(like Donchin wheelchair commands) to pick which set to display
-or display first.
-
-* May be more useful with Glass, where input is more limited.
+state come first.
 
 ### View:
 
 Press View button = displays the bookmarks ordered by distance
 to current brain state. 
 
-Display *all* the items, ordered by distance,
-and shaded based on their distance.
+Displays the top five items, ordered by distance from the current state.
 
-Alternately, could truncate the list something like:
+Changes in brain state never directly cause a change in the browser window,
+which would be disruptive.
+
+### Save:
+
+Press Save button = saves with the current brain state.
+
+And the displayed list reorders itself.
+
+Nearest neighbor approach:
+Save each bookmark along with its raw data, no classifier
+
+### Update continuously checkbox (experimental):
+
+When selected, the system behaves as though the View button were pressed every time a change
+occurs in input from the brain sensor or the sliders. This way
+the display is always up to date, but it may be a distracting biofeedback
+effect because
+the bookmarks will be rearranged frequently based on their distance to
+the current brain state.
+
+### Save continuously checkbox (experimental):
+
+When selected, the system behaves roughly as though the Save button were pressed
+every second. The currently viewed page is added to the bookmark list,
+unless the same URL was already bookmarked. In that case the brain
+state stored with the previous bookmark is not updated, i.e., the brain state
+for any URL remains what it was when it was first
+bookmarked. This is a compromise intended avoid frequent shuffling of
+the displayed bookmark list creating a biofeedback effect.
+
+### Other plans:
+
+The length of the bookmark list could be changeable, determined by
 
 * Must be within RADIUSFAR otherwise forget it.
 
@@ -62,21 +96,15 @@ Alternately, could truncate the list something like:
 very close (ie within RADIUSNEAR), so I don't lose something I
 thought I filed
 
-Avoid biofeedback effect, where the 2 peripheral windows
-keep swapping as brain state changes. Maybe it's very subtle.
-(*)Or it only shows up when you try to bookmark something.
+Some of the state info could be physiological and some could be brain.
 
-Brain state never causes us to mess with the main window.
+The bookmarks could also be marked with a separate orthogonal
+dimension giving interest or arousal (placeholder is implemented).
 
-### Save:
-
-Press Save button = saves with
-the current brain state and (placeholder) current interest level.
-
-And the auxiliary display reorders itself
-
-Nearest neighbor approach:
-Save each bookmark along with its raw data, no classifier
+Maybe we use context and other information as well as
+brain state to choose among several bookmarks or group or
+configurations, thinking again back to
+activity-based window managers as an analogy
 
 ## Versions
 
@@ -108,48 +136,20 @@ Bookmark window =
 
 Bookmarks display
 
-* Shows list of bookmarks, ordered and shaded.
+* Shows list of bookmarks, ordered.
 
-* If you click a bookmark it sends main browser there
+* If you click a bookmark it sends main browser there.
 
-* If you select a text region, we save that (along
-with URL of the page it was on), otherwise we just save the
+* If you had copied a text region to the system clipboard, we save that (along
+with URL of the page it was on) when you Save, otherwise we just save the
 URL.
 
-View
-
-* Displays all (or nearby) bookmarks whenever you hit View
-
-* Continuously update as brain state changes (could provide UI control to toggle this on and off)
-
-## Usage
-
-Run Safari with one window
-
-python3 main.py
-
-Compatibility and porting
-
-* This system is currently implemented for Mac, using Safari.
-
-    * Also must 'Allow JavaScript from Apple Events' option in
-Safari's Develop menu
-
-* Should work with different browsers on Mac: 
-
-    * Change the Applescript commands as noted
-
-* Should work on windows:
-
-    * Replace the Applescript commands
-with powerscript or other code that will
-perform the same tasks
 
 ## Code Files
 
 ### main.py
 
-Main program, including...
+Main program, including:
 
 * UI and its commands and supporting code
 
@@ -159,7 +159,7 @@ Main program, including...
 
 ### pad.py
 
-Back end data structures and support functions, including...
+Back end data structures and support functions, including:
 
 * Bookmark and related classes
 
@@ -171,4 +171,4 @@ Runs in separate thread, calls back to pad.py when it gets data
 
 ## Miscellaneous
 
-Thumbnail stuff leaves files in $TMPDIR
+Thumbnail stuff leaves junk files in $TMPDIR
