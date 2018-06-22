@@ -48,12 +48,10 @@ def viewCB ():
 #
 def continuousViewVarCB (*ignoreargs):
 	if continuousViewVar.get()==1:
-		# Optional if brain data is streaming anyway, jus to start us off
+		# Optional if brain data is streaming anyway, just to start us off
 		viewCB()
 
-		viewButton["state"] = tk.DISABLED
-	else:
-		viewButton["state"] = tk.NORMAL
+	viewButton["state"] = tk.DISABLED if continuousViewVar.get()==1 else tk.NORMAL
 
 #
 # Similar, for save
@@ -61,13 +59,11 @@ def continuousViewVarCB (*ignoreargs):
 def continuousSaveVarCB (*ignoreargs):
 	if continuousSaveVar.get()==1:
 		continuousSaveTick ()
-		saveButton["state"] = tk.DISABLED
-	else:
-		saveButton["state"] = tk.NORMAL
+
+	saveButton["state"] = tk.DISABLED if continuousSaveVar.get()==1 else tk.NORMAL
 
 #
 # Timer callback for continousSave
-# Set up callback 
 # Receive tick, do the job, then set up the next callback
 #
 def continuousSaveTick ():
@@ -230,6 +226,7 @@ def brainCB (line):
 		# ...which will also trigger a viewCB() so no need for us to call it
 
 # Observer callback, ie when value of a brain slider variable changes
+# manually or because brainCB() above changes it
 def brainVarCB (var, index):
 	pad.currentState.data[index] = var.get()
 
@@ -304,7 +301,7 @@ for i in range (5):
 ############################################################
 
 # Start up brainclient
-b = bclientThread = threading.Thread (target=brainclient.mainloop, args=[brainCB])
+bclientThread = threading.Thread (target=brainclient.mainloop, args=[brainCB])
 bclientThread.start()
 
 # Start things off
