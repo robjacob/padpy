@@ -289,7 +289,7 @@ slidersFrame.grid (row=3, column=0, pady=20, sticky="we")
 # Sliders
 # NB subscripts in brainVars match those in currentState
 brainVars = []
-for i in range (5):
+for i in range (16):
 	v = tk.DoubleVar()
 	v.trace ("w", lambda *args, v=v, index=i: brainVarCB(v, index))
 	brainVars.append (v)

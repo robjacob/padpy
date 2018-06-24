@@ -113,15 +113,15 @@ def callShell (script):
 ############################################################
 
 # Latest measurement, i.e., what we would act upon for Save or View
-currentState = StatePoint ([0, 0, 0, 0, 0])
+currentState = StatePoint ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
 # The main list
 allBookmarks = []
 
 # Some miscellaneous initialization to start us up
 allBookmarks.append (Bookmark ("http://www.tufts.edu/", "Tufts University", None, None))
-currentState = StatePoint ([.8, 0, 0, 0, 0])
+currentState = StatePoint ([.8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 allBookmarks.append (Bookmark ("http://www.cs.tufts.edu/~jacob/", "Rob Jacob Home Page", None, None))
-currentState = StatePoint ([.4, 0, 0, 0, 0])
+currentState = StatePoint ([.4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 allBookmarks.append (Bookmark ("http://www.tufts.edu/home/visiting_directions/", "Visiting, Maps & Directions - Tufts University", None, None))
-currentState = StatePoint ([0, 0, 0, 0, 0])
+currentState = StatePoint ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
