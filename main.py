@@ -8,6 +8,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 import pad
+import filter
 import brainclient
 
 ############################################################
@@ -205,6 +206,9 @@ class BookmarkW:
 # COMMUNICATE WITH BRAIN DEVICE
 ############################################################
 
+# Instantiate our filter
+myfilter = filter.MAvgFilter()
+
 # Call from brainclient, arg = line of text from matlab
 # This is coming from a separate thread,
 # both threads access currentBrainState
@@ -217,7 +221,10 @@ def brainCB (line):
 		print ("brainCB: can't parse input line: " + line, file=sys.stderr)
 
 	else:
-		pad.currentState = pad.StatePoint (list (map (float, tokens)))
+		inp = list (map (float, tokens))
+		# NB filter is applied here, but not to user GUI inputs
+		inp = myfilter.process (inp)
+		pad.currentState = pad.StatePoint (inp)
 
 		# Display it back to user via the sliders
 		for i in range (len (pad.currentState.data)):

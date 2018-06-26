@@ -53,7 +53,7 @@ def mainloop (callback):
 	try:
 		bclient = BrainClient (callback)
 	except Exception:
-		print ("Brainclient: Use on-screen sliders to simulate instead")
+		print ("Brainclient: Use on-screen controls to simulate instead")
 		return
 
 	while not quit:
