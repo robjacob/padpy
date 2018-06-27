@@ -223,6 +223,7 @@ def brainCB (line):
 	else:
 		inp = list (map (float, tokens))
 		# NB filter is applied here, but not to user GUI inputs
+		# If you don't want filtering, delete the next line
 		inp = myfilter.process (inp)
 		pad.currentState = pad.StatePoint (inp)
 

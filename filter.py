@@ -11,8 +11,9 @@
 import pad
 
 class MAvgFilter:
-	def __init__ (self, nwindow=5):
-		self.nwindow = nwindow
+	def __init__ (self):
+		# User-settable parameter
+		self.nwindow = 5
 
 		# Saves as much recent input data as we'll use,
 		# latest value at beginning
